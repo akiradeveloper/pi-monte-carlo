@@ -33,21 +33,38 @@ fn main() {
     let mut sum_pi = 0.;
 
     for i in 0..n {
-        let xs = massively::util::random::uniform_distribution_f32(&exec, m as usize, i as u64).unwrap();
-        let ys = massively::util::random::uniform_distribution_f32(&exec, m as usize, (i+1) as u64).unwrap();
+        let seed1 = massively::slice::constant_slice(m as usize, i as u64);
+        let seed2 = massively::slice::constant_slice(m as usize, (i+1) as u64);
+
+        let idx = massively::slice::tabulate_slice(m as usize);
+
+
+        let x = massively::slice::transform_slice(SoA2(seed1, idx), RandomF32);
+        let y = massively::slice::transform_slice(SoA2(seed2, idx), RandomF32);
 
         // Within the quarter circle -> 1, otherwise -> 0.
-        let mut hits = exec.filled(m as usize, 0).unwrap();
-        massively::transform(&exec, SoA2(xs.slice(..), ys.slice(..)), DetectHit, SoA1(hits.slice_mut(..))).unwrap();
+        let hits = massively::slice::transform_slice(SoA2(x,y), DetectHit);
 
         // Count the number of ones.
-        let (n_hits,) = massively::reduce(&exec, SoA1(hits.slice(..)), (0,), CountHit).unwrap();
+        let (n_hits,) = massively::reduce(&exec, SoA1(hits), (0,), CountHit).unwrap();
 
         let pi = (n_hits as f64 / m as f64) * 4.;
         sum_pi += pi;
     }
 
     println!("pi={}", sum_pi / n as f64)
+}
+
+struct RandomF32;
+#[cubecl::cube]
+impl<B> op::UnaryOp<B, (u64, u32)> for RandomF32 where B: cubecl::Runtime {
+    type Output = (f32,);
+
+    fn apply(inp: (u64, u32)) -> (f32,) {
+        let (seed, i) = inp;
+        let x= massively::util::random::uniform_f32(seed, i);
+        (x,)
+    }
 }
 
 struct DetectHit;

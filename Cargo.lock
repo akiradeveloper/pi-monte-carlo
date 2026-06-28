@@ -1911,8 +1911,8 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
 name = "massively"
-version = "0.14.0"
-source = "git+https://github.com/akiradeveloper/massively?tag=v0.14#750508949eec6c75b84f44c9e8baff40d263d526"
+version = "0.22.0"
+source = "git+https://github.com/akiradeveloper/massively?tag=v0.22#3dc563258a961c50e285e5164349a5506d177a87"
 dependencies = [
  "cubecl",
  "futures-lite",
@@ -2275,7 +2275,7 @@ dependencies = [
 
 [[package]]
 name = "pi-monte-carlo"
-version = "2.0.0"
+version = "3.0.0"
 dependencies = [
  "clap",
  "cubecl",
