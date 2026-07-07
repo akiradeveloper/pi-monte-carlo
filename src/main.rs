@@ -1,20 +1,22 @@
+use std::num::NonZeroU32;
+
 use clap::Parser;
 use cubecl::prelude::*;
-use massively::{op, prelude::*};
+use massively::{Executor, MIndex, Zip1, Zip2, op, reduce, transform, util::random};
 
 #[derive(clap::Parser)]
 struct Args {
     #[arg(help = "Number of iteration")]
-    n: u32,
+    n: NonZeroU32,
     #[arg(help = "Number of points per iteration")]
-    m: u32,
+    m: NonZeroU32,
 }
 
-fn main() {
+fn main() -> Result<(), massively::Error> {
     let args = Args::parse();
 
-    let n = args.n;
-    let m = args.m;
+    let n = args.n.get() as MIndex;
+    let m = args.m.get() as MIndex;
 
     // Setup
     let exec = {
@@ -25,7 +27,7 @@ fn main() {
         // let device = cubecl::hip::device::AmdDevice::new(0);
         // let device = cubecl::cuda::CudaDevice::new(0);
 
-        massively::Executor::<cubecl::wgpu::WgpuRuntime>::new(device)
+        Executor::<cubecl::wgpu::WgpuRuntime>::new(device)
         // massively::Executor::<cubecl::hip::HipRuntime>::new(device)
         // massively::Executor::<cubecl::cuda::CudaRuntime>::new(device)
     };
@@ -33,38 +35,27 @@ fn main() {
     let mut sum_pi = 0.;
 
     for i in 0..n {
-        let seed1 = massively::slice::constant_slice(m as usize, i as u64);
-        let seed2 = massively::slice::constant_slice(m as usize, (i+1) as u64);
+        let seed = i as u64 * 2;
+        let x = random::uniform_distribution_f32(&exec, m, 0.0, 1.0, seed)?;
+        let y = random::uniform_distribution_f32(&exec, m, 0.0, 1.0, seed + 1)?;
+        let hits = exec.full(m, 0_u32)?;
 
-        let idx = massively::slice::tabulate_slice(m as usize);
-
-
-        let x = massively::slice::transform_slice(SoA2(seed1, idx), RandomF32);
-        let y = massively::slice::transform_slice(SoA2(seed2, idx), RandomF32);
-
-        // Within the quarter circle -> 1, otherwise -> 0.
-        let hits = massively::slice::transform_slice(SoA2(x,y), DetectHit);
+        transform(
+            &exec,
+            Zip2(x.slice(..), y.slice(..)),
+            DetectHit,
+            Zip1(hits.slice_mut(..)),
+        )?;
 
         // Count the number of ones.
-        let (n_hits,) = massively::reduce(&exec, SoA1(hits), (0,), CountHit).unwrap();
+        let (n_hits,) = reduce(&exec, Zip1(hits.slice(..)), (0_u32,), CountHit)?;
 
         let pi = (n_hits as f64 / m as f64) * 4.;
         sum_pi += pi;
     }
 
-    println!("pi={}", sum_pi / n as f64)
-}
-
-struct RandomF32;
-#[cubecl::cube]
-impl<B> op::UnaryOp<B, (u64, u32)> for RandomF32 where B: cubecl::Runtime {
-    type Output = (f32,);
-
-    fn apply(inp: (u64, u32)) -> (f32,) {
-        let (seed, i) = inp;
-        let x= massively::util::random::uniform_f32(seed, i);
-        (x,)
-    }
+    println!("pi={}", sum_pi / n as f64);
+    Ok(())
 }
 
 struct DetectHit;
