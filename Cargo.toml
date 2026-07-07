@@ -1,9 +1,9 @@
 [package]
 name = "pi-monte-carlo"
-version = "3.0.0"
+version = "5.0.0"
 edition = "2024"
 
 [dependencies]
 clap = { version = "4.6.1", features = ["derive"] }
 cubecl = { git = "https://github.com/tracel-ai/cubecl.git", branch = "main", features = ["wgpu", "hip", "cuda"] }
-massively = { git = "https://github.com/akiradeveloper/massively", tag = "v0.53" }
+massively = { git = "https://github.com/akiradeveloper/massively", tag = "v0.60" }

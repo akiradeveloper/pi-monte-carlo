@@ -1,2 +1,2 @@
-run:
-  time cargo run --release -- 1000 10000000
+run LOOP:
+  time cargo run --release -- {{LOOP}} 500000000

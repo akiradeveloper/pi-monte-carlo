@@ -2,7 +2,7 @@ use std::num::NonZeroU32;
 
 use clap::Parser;
 use cubecl::prelude::*;
-use massively::{Executor, MIndex, Zip1, Zip2, op, reduce, transform, util::random};
+use massively::{op, prelude::*};
 
 #[derive(clap::Parser)]
 struct Args {
@@ -36,21 +36,18 @@ fn main() -> Result<(), massively::Error> {
 
     for i in 0..n {
         let seed = i as u64 * 2;
-        let x = random::uniform_distribution_f32(&exec, m, 0.0, 1.0, seed)?;
-        let y = random::uniform_distribution_f32(&exec, m, 0.0, 1.0, seed + 1)?;
-        let hits = exec.full(m, 0_u32)?;
 
-        transform(
-            &exec,
-            Zip2(x.slice(..), y.slice(..)),
-            DetectHit,
-            Zip1(hits.slice_mut(..)),
-        )?;
+        let x = massively::util::random::uniform_f32(0.0, 1.0, seed)?.take(m);
+        let y = massively::util::random::uniform_f32(0.0, 1.0, seed+1)?.take(m);
+
+        let hits = exec.full(m, 0).unwrap();
+        massively::transform(&exec, Zip2(x, y), DetectHit, Zip1(hits.slice_mut(..))).unwrap();
 
         // Count the number of ones.
-        let (n_hits,) = reduce(&exec, Zip1(hits.slice(..)), (0_u32,), CountHit)?;
+        let n_hits = massively::reduce(&exec, hits.slice(..), 0_u32, CountHit)?;
 
         let pi = (n_hits as f64 / m as f64) * 4.;
+        dbg!(pi);
         sum_pi += pi;
     }
 
@@ -75,11 +72,11 @@ where
 
 struct CountHit;
 #[cubecl::cube]
-impl<B> op::ReductionOp<B, (u32,)> for CountHit
+impl<B> op::ReductionOp<B, u32> for CountHit
 where
     B: cubecl::Runtime,
 {
-    fn apply(x: (u32,), y: (u32,)) -> (u32,) {
-        (x.0 + y.0,)
+    fn apply(x: u32, y: u32) -> u32 {
+        x + y
     }
 }
