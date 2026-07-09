@@ -40,11 +40,10 @@ fn main() -> Result<(), massively::Error> {
         let x = massively::util::random::uniform_f32(0.0, 1.0, seed)?.take(m);
         let y = massively::util::random::uniform_f32(0.0, 1.0, seed+1)?.take(m);
 
-        let hits = exec.full(m, 0).unwrap();
-        massively::transform(&exec, Zip2(x, y), DetectHit, Zip1(hits.slice_mut(..))).unwrap();
+        let hits = massively::lazy::transform(Zip2(x,y), DetectHit);
 
         // Count the number of ones.
-        let n_hits = massively::reduce(&exec, hits.slice(..), 0_u32, CountHit)?;
+        let n_hits = massively::reduce(&exec, hits, 0_u32, CountHit)?;
 
         let pi = (n_hits as f64 / m as f64) * 4.;
         dbg!(pi);
@@ -61,12 +60,12 @@ impl<B> op::UnaryOp<B, (f32, f32)> for DetectHit
 where
     B: cubecl::Runtime,
 {
-    type Output = (u32,);
+    type Output = u32;
 
-    fn apply(p: (f32, f32)) -> (u32,) {
+    fn apply(p: (f32, f32)) -> u32 {
         let (x, y) = p;
         let d2 = x * x + y * y;
-        if d2 <= 1. { (1u32,) } else { (0u32,) }
+        if d2 <= 1. { 1u32 } else { 0u32 }
     }
 }
 
