@@ -40,7 +40,7 @@ fn main() -> Result<(), massively::Error> {
         let x = massively::util::random::uniform_f32(0.0, 1.0, seed)?.take(m);
         let y = massively::util::random::uniform_f32(0.0, 1.0, seed+1)?.take(m);
 
-        let hits = massively::lazy::transform(Zip2(x,y), DetectHit);
+        let hits = massively::lazy::transform(zip2(x,y), DetectHit);
 
         // Count the number of ones.
         let n_hits = massively::reduce(&exec, hits, 0_u32, CountHit)?;
@@ -56,10 +56,7 @@ fn main() -> Result<(), massively::Error> {
 
 struct DetectHit;
 #[cubecl::cube]
-impl<B> op::UnaryOp<B, (f32, f32)> for DetectHit
-where
-    B: cubecl::Runtime,
-{
+impl op::UnaryOp<(f32, f32)> for DetectHit {
     type Output = u32;
 
     fn apply(p: (f32, f32)) -> u32 {
@@ -71,10 +68,7 @@ where
 
 struct CountHit;
 #[cubecl::cube]
-impl<B> op::ReductionOp<B, u32> for CountHit
-where
-    B: cubecl::Runtime,
-{
+impl op::ReductionOp<u32> for CountHit {
     fn apply(x: u32, y: u32) -> u32 {
         x + y
     }
