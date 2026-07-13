@@ -38,12 +38,12 @@ fn main() -> Result<(), massively::Error> {
         let seed = i as u64 * 2;
 
         let x = massively::util::random::uniform_f32(0.0, 1.0, seed)?.take(m);
-        let y = massively::util::random::uniform_f32(0.0, 1.0, seed+1)?.take(m);
+        let y = massively::util::random::uniform_f32(0.0, 1.0, seed + 1)?.take(m);
 
-        let hits = massively::lazy::transform(zip2(x,y), DetectHit);
+        let hits = massively::lazy::transform(zip2(x, y), DetectHit);
 
         // Count the number of ones.
-        let n_hits = massively::reduce(&exec, hits, 0_u32, CountHit)?;
+        let n_hits = massively::vector::reduce(&exec, hits, 0_u32, CountHit)?;
 
         let pi = (n_hits as f64 / m as f64) * 4.;
         dbg!(pi);
